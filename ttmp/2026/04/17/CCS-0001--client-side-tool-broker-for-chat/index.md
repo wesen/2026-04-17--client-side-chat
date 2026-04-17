@@ -46,6 +46,20 @@ RelatedFiles:
       Note: Dedicated worker that performs OPFS list/read/write operations
     - Path: frontend/src/workers/parser.worker.ts
       Note: Dedicated worker for tokenization, parse, and index transforms
+    - Path: frontend/src/session/websocket-session-client.ts
+      Note: Browser websocket session client that binds the frontend broker to the backend session
+    - Path: frontend/src/demo/browser-chat-demo.ts
+      Note: DOM-based demo shell that wires the session client into the chat UI
+    - Path: frontend/src/demo/index.ts
+      Note: Demo module exports for the browser UI entrypoint
+    - Path: frontend/src/main.ts
+      Note: Browser bootstrap that mounts the demo app
+    - Path: frontend/index.html
+      Note: Demo HTML entrypoint for the browser UI
+    - Path: frontend/src/workers/opfs.worker.ts
+      Note: Dedicated worker that performs OPFS list/read/write operations
+    - Path: frontend/src/workers/parser.worker.ts
+      Note: Dedicated worker for tokenization, parse, and index transforms
     - Path: frontend/src/workers/wasm.worker.ts
       Note: Dedicated worker that performs local compute tasks
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
@@ -71,7 +85,7 @@ WhenToUse: ""
 
 ## Overview
 
-This ticket documents the design for a simple proof of concept where the Go backend owns the conversation and the browser owns capability-bound tools such as OPFS and WASM workers. The repository now includes an initial implementation scaffold: the Go backend service, an in-memory browser session bridge, and worker-backed browser executors exist, but the real websocket/browser transport is still not wired.
+This ticket documents the design for a simple proof of concept where the Go backend owns the conversation and the browser owns capability-bound tools such as OPFS and WASM workers. The repository now includes the initial implementation scaffold plus a real websocket/browser transport and a browser demo shell: the Go backend service, the in-memory browser session bridge, worker-backed browser executors, the browser websocket session client, and the DOM-based demo app all exist.
 
 The main goal is still to validate the routed RPC model with mocked LLM calls and minimal policy. That keeps the first build small while still proving the most important boundary: model → backend router → browser tool broker → backend → model.
 

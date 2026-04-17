@@ -19,6 +19,47 @@ WhenToUse: ""
 
 # Changelog
 
+## 2026-04-17 - Demo UI wired to the websocket session client
+
+- Added a DOM-based browser demo shell that creates a chat session, connects the websocket session client, and posts user prompts back to the backend.
+- Reworked the chat view into a dependency-free DOM renderer so the demo can run without a React runtime.
+- Added a browser bootstrap and HTML entrypoint for the demo.
+- Validated the frontend TypeScript demo with `tsc --noEmit` after fixing the OPFS worker typing.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/demo/browser-chat-demo.ts — DOM-based browser demo shell that wires the session client into the chat UI
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/main.ts — Browser bootstrap that mounts the demo app
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/session/websocket-session-client.ts — Browser websocket session client for the frontend broker
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/app/ChatView.tsx — Dependency-free DOM chat view used by the demo shell
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/opfs.worker.ts — OPFS worker typing fix required for the frontend TypeScript pass
+
+## 2026-04-17 - Demo docs and bundle refreshed
+
+- Refreshed the ticket docs and the reMarkable bundle after the demo UI wiring.
+- Verified the refreshed bundle listing.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/index.md — Ticket index updated to describe the demo UI and browser demo shell
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/tasks.md — Checklist updated to mark demo wiring, TypeScript validation, and bundle refresh complete
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/reference/02-diary.md — Diary updated with the browser demo wiring step
+
+## 2026-04-17 - WebSocket browser transport added
+
+- Added a websocket upgrade endpoint for browser sessions.
+- Added a browser websocket session client that binds the frontend broker to the backend session.
+- Updated the browser bridge disconnect path so pending tool calls fail fast when the browser disconnects.
+- Added a websocket integration test that exercises the full request/result round trip.
+- `go test ./...` passes after the websocket transport landed.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/websocket.go — Websocket upgrade handler for browser sessions
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/websocket_test.go — Integration test for the websocket browser transport
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/browserbridge.go — Disconnect handling and pending-call cleanup
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/session/websocket-session-client.ts — Browser websocket session client for the frontend broker
+
 ## 2026-04-17 - Documentation draft completed
 
 - Wrote the design guide for the browser-routed tool broker POC.

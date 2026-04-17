@@ -34,6 +34,12 @@ WhenToUse: ""
 - [x] Add backend unit tests for routing and mock-model flow
 - [x] Wire a browser session bridge that replaces the loopback client bridge
 - [x] Add worker-backed browser executors for OPFS and WASM tasks
+- [x] Add a websocket transport endpoint for browser sessions
+- [x] Add a browser websocket session client
+- [x] Wire the session client into the demo chat UI
+- [x] Validate the frontend TypeScript demo with `tsc --noEmit`
+- [x] Refresh the reMarkable bundle after the demo UI wiring
+- [x] Verify the refreshed bundle listing on reMarkable
 
 ## Completed
 
@@ -49,5 +55,7 @@ WhenToUse: ""
 
 ## Notes
 
-- The implementation is still a proof-of-concept; the real websocket/browser transport and a production LLM provider are intentionally out of scope for now.
+- The implementation is still a proof-of-concept; the websocket/browser transport is now present, but a production LLM provider is intentionally out of scope for now.
+- The browser demo is DOM-based to avoid a React/toolchain dependency in this repo.
+- Frontend TypeScript validation used `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit`.
 - The simple version intentionally excludes policy-engine complexity and real LLM integration.

@@ -494,3 +494,244 @@ The most important thing preserved here is the trust split: the Go backend still
 - OPFS task handlers: `list_dir`, `read_text`, `write_text`
 - WASM task handlers: `grep`, `tokenize`, `embed`, `transcode`
 - Validation command: `gofmt -w backend/cmd/chatd/main.go backend/internal/chat/*.go && go test ./...`
+
+## Step 6: Add the websocket browser transport and browser session client
+
+This step connected the proof of concept to a real websocket path. The backend now exposes a browser session endpoint that upgrades to a websocket, streams tool requests to the browser, and accepts `session.capabilities` and `tool.result` messages back from the client. On the frontend side, there is now a browser websocket session client that can attach a `FrontendToolBroker`, advertise local capabilities, and route browser-side tool results back to the server.
+
+This is the first step where the transport really matches the architecture diagram instead of just emulating it in memory. The Go backend still owns the conversation and the model loop, but browser attachment now happens over a websocket session that a real UI could connect to.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Turn the in-memory browser bridge into a real websocket-backed browser transport and add the browser-side client object that can connect to it.
+
+**Inferred user intent:** Make the POC feel like an actual browser-integrated system instead of a backend-only mock.
+
+**Commit (code):** 3f2e061 — "Add websocket browser transport"
+
+### What I did
+- Added `backend/internal/chat/websocket.go` with a websocket upgrade handler for `/api/sessions/{sessionID}/ws`.
+- Added `backend/internal/chat/websocket_test.go` to exercise a live websocket round trip through the backend router.
+- Updated `backend/internal/chat/http.go` to route `/ws` alongside the existing message endpoint.
+- Updated `backend/internal/chat/browserbridge.go` so disconnects close pending tool-result channels and unblock in-flight tool calls quickly.
+- Added `frontend/src/session/websocket-session-client.ts` as the browser-side websocket transport that binds the frontend broker to a backend session.
+- Added `nhooyr.io/websocket` as the Go websocket dependency and refreshed `go.sum`.
+- Updated the ticket docs to reflect the websocket transport and browser session client.
+- Ran `go mod tidy && go test ./...` after wiring the websocket dependency.
+
+### Why
+- The architecture needed a real bidirectional browser transport instead of a purely in-memory bridge.
+- Websocket transport lets the frontend broker attach from a browser tab and receive tool requests as they happen.
+- Closing pending bridge channels on disconnect makes the tool-call failure mode more deterministic and avoids waiting for a long timeout when the browser disappears.
+
+### What worked
+- `go test ./...` passes after the websocket transport changes.
+- The websocket integration test proves a browser can receive a tool request over the socket, submit a tool result, and get the final assistant response back through the HTTP turn endpoint.
+- The browser session client can connect to the session websocket and forward capability/result envelopes.
+
+### What didn't work
+- N/A. The transport and test passed on the first validation run after the implementation landed.
+
+### What I learned
+- The cleanest websocket shape here is a narrow session endpoint that only forwards `session.capabilities`, `tool.request`, and `tool.result` envelopes.
+- Closing pending bridge channels on disconnect is a simple way to make browser unavailability visible to the model/control plane.
+- Keeping the browser websocket client separate from the broker keeps the broker focused on tool semantics rather than socket lifecycle.
+
+### What was tricky to build
+- The main sharp edge was avoiding accidental coupling between websocket lifecycle, bridge state, and tool-call waiting logic.
+- Another tricky point was making sure the websocket handler and the bridge both know when the browser is gone so pending calls don't hang forever.
+- On the frontend side, the browser client had to stay generic enough to attach to any `FrontendToolBroker` instance without hard-coding tool logic.
+
+### What warrants a second pair of eyes
+- Review the websocket disconnect flow to make sure the bridge closure and the session socket closure stay in sync under repeated connects/disconnects.
+- Confirm that the browser client is a good fit for the eventual UI wiring and doesn't need a thinner adapter layer.
+- Review the initial capability snapshot and browser capability publish flow to make sure the server-side and browser-side views do not drift.
+
+### What should be done in the future
+- Wire the websocket session client into the demo chat UI.
+- Add a frontend build/test pass once the repo has a TypeScript toolchain.
+- Expand the websocket message protocol only if new tool control messages are truly needed.
+
+### Code review instructions
+- Start in `backend/internal/chat/websocket.go` and `backend/internal/chat/websocket_test.go`.
+- Then review `frontend/src/session/websocket-session-client.ts`.
+- Check `backend/internal/chat/browserbridge.go` to see how disconnects and pending calls are handled.
+- Validate with `go test ./...`.
+
+### Technical details
+- Websocket endpoint: `GET /api/sessions/{sessionID}/ws`
+- Browser websocket client: `WebSocketSessionClient`
+- Supported websocket messages: `session.capabilities`, `tool.request`, `tool.result`
+- Validation command: `go mod tidy && go test ./...`
+
+## Step 7: Wire the websocket session client into a runnable browser demo shell
+
+This step finished the visible browser-facing portion of the proof of concept. The demo now creates a backend session, connects the browser websocket client, binds it to the frontend broker, and renders a DOM-based chat surface that can post user prompts back to the Go backend. The browser is now much closer to something a reviewer can open and use, rather than just a transport abstraction.
+
+I also removed the last React dependency from the demo path so the UI can be validated with a plain TypeScript compile instead of needing a full frontend framework stack. That keeps the POC lightweight while still proving the end-to-end control flow from browser UI to websocket transport to backend model loop and back.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Finish the visible browser demo by wiring the session client into the chat UI and validating the frontend TypeScript path.
+
+**Inferred user intent:** Make the prototype feel usable in a browser tab and confirm the frontend code is internally consistent.
+
+**Commit (code):** 0642056 — "Wire demo UI to websocket session client"
+
+### What I did
+- Added `frontend/src/demo/browser-chat-demo.ts` as a DOM-based demo shell.
+- Added `frontend/src/main.ts` as the browser bootstrap that mounts the demo.
+- Added `frontend/index.html` as the browser entrypoint.
+- Reworked `frontend/src/app/ChatView.tsx` into a dependency-free DOM renderer.
+- Updated `frontend/src/session/websocket-session-client.ts` and `frontend/src/tool-broker/contracts.ts` to support the demo wiring.
+- Fixed an OPFS worker typing issue surfaced by the TypeScript compiler by casting the directory handle to an `AsyncIterable` over `[string, FileSystemHandle]` entries.
+- Validated the frontend with:
+
+  ```text
+  npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit
+  ```
+
+- Re-ran `go test ./...` to confirm the backend still passed after the frontend-only demo wiring.
+- Refreshed the ticket docs and reMarkable bundle after the demo UI wiring and verified the refreshed bundle listing.
+
+### Why
+- The websocket transport needed a real browser-facing entrypoint to prove the full architecture path.
+- A DOM-based demo avoids introducing a React dependency or bundler-specific complexity just to show the architecture working.
+- TypeScript validation catches integration mistakes in the browser-facing types before the UI is ever bundled.
+
+### What worked
+- The demo now creates a session, opens the websocket client, and posts prompts back to the backend.
+- The browser session client remains the bridge between the websocket transport and the frontend tool broker.
+- `tsc --noEmit` succeeded after the OPFS worker typing fix.
+- `go test ./...` still passes.
+- The reMarkable bundle was refreshed with the new demo UI docs and the remote listing confirmed the upload.
+
+### What didn't work
+- The first TypeScript compile attempt failed with:
+
+  ```text
+  frontend/src/workers/opfs.worker.ts(61,34): error TS2339: Property 'entries' does not exist on type 'FileSystemDirectoryHandle'.
+  ```
+
+- Switching from `entries()` to `keys()` also failed because the TypeScript DOM typings in this environment did not expose `keys()` on `FileSystemDirectoryHandle` either.
+- I fixed that by casting the directory handle to an `AsyncIterable<[string, FileSystemHandle]>` and iterating over that view instead.
+
+### What I learned
+- The frontend can stay extremely small if the demo shell is just plain DOM and a session bootstrap.
+- It is better to keep the websocket session client generic and let the demo compose it with the tool broker.
+- TypeScript DOM typings for newer browser file-system APIs can be narrower than the browser runtime surface, so a small compatibility cast is sometimes necessary in worker code.
+
+### What was tricky to build
+- The main sharp edge was making the demo feel real without dragging in a full frontend framework.
+- Another tricky point was getting the browser session client, broker, and demo shell to share responsibility cleanly: the demo handles user prompts, the session client handles websocket transport, and the broker handles tool dispatch/results.
+- The OPFS worker needed a typing workaround that stayed honest about runtime behavior but still satisfied the compiler.
+
+### What warrants a second pair of eyes
+- Review the DOM demo flow to make sure it remains simple enough for the next contributor to extend.
+- Confirm the websocket session client still makes sense as the broker transport adapter once a real UI framework is introduced.
+- Review the OPFS worker type cast to make sure it does not hide a future portability issue across browsers or build targets.
+
+### What should be done in the future
+- Keep the demo shell lightweight unless a real frontend framework becomes necessary.
+- If the browser file-system APIs continue to lag in DOM typings, add a small type wrapper rather than scattering casts.
+- If the demo grows further, separate the chat transcript rendering from the connection/bootstrap logic.
+
+### Code review instructions
+- Start in `frontend/src/demo/browser-chat-demo.ts` and `frontend/src/main.ts`.
+- Then review `frontend/src/app/ChatView.tsx` and `frontend/src/session/websocket-session-client.ts`.
+- Check `frontend/src/workers/opfs.worker.ts` for the typing fix that unblocked `tsc`.
+- Validate with `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit` and `go test ./...`.
+
+### Technical details
+- Demo bootstrap: `frontend/src/main.ts`
+- Demo shell: `frontend/src/demo/browser-chat-demo.ts`
+- HTML entrypoint: `frontend/index.html`
+- TypeScript validation command: `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit`
+
+## Step 7: Wire the websocket session client into a runnable browser demo shell
+
+This step finished the visible browser-facing portion of the proof of concept. The demo now creates a backend session, connects the browser websocket client, binds it to the frontend broker, and renders a DOM-based chat surface that can post user prompts back to the Go backend. The browser is now much closer to something a reviewer can open and use, rather than just a transport abstraction.
+
+I also removed the last React dependency from the demo path so the UI can be validated with a plain TypeScript compile instead of needing a full frontend framework stack. That keeps the POC lightweight while still proving the end-to-end control flow from browser UI to websocket transport to backend model loop and back.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Finish the visible browser demo by wiring the session client into the chat UI and validating the frontend TypeScript path.
+
+**Inferred user intent:** Make the prototype feel usable in a browser tab and confirm the frontend code is internally consistent.
+
+**Commit (code):** 0642056 — "Wire demo UI to websocket session client"
+
+### What I did
+- Added `frontend/src/demo/browser-chat-demo.ts` as a DOM-based demo shell.
+- Added `frontend/src/main.ts` as the browser bootstrap that mounts the demo.
+- Added `frontend/index.html` as the browser entrypoint.
+- Reworked `frontend/src/app/ChatView.tsx` into a dependency-free DOM renderer.
+- Updated `frontend/src/session/websocket-session-client.ts` and `frontend/src/tool-broker/contracts.ts` to support the demo wiring.
+- Fixed an OPFS worker typing issue surfaced by the TypeScript compiler by casting the directory handle to an `AsyncIterable` over `[string, FileSystemHandle]` entries.
+- Validated the frontend with:
+
+  ```text
+  npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit
+  ```
+
+- Re-ran `go test ./...` to confirm the backend still passed after the frontend-only demo wiring.
+
+### Why
+- The websocket transport needed a real browser-facing entrypoint to prove the full architecture path.
+- A DOM-based demo avoids introducing a React dependency or bundler-specific complexity just to show the architecture working.
+- TypeScript validation catches integration mistakes in the browser-facing types before the UI is ever bundled.
+
+### What worked
+- The demo now creates a session, opens the websocket client, and posts prompts back to the backend.
+- The browser session client remains the bridge between the websocket transport and the frontend tool broker.
+- `tsc --noEmit` succeeded after the OPFS worker typing fix.
+- `go test ./...` still passes.
+
+### What didn't work
+- The first TypeScript compile attempt failed with:
+
+  ```text
+  frontend/src/workers/opfs.worker.ts(61,34): error TS2339: Property 'entries' does not exist on type 'FileSystemDirectoryHandle'.
+  ```
+
+- Switching from `entries()` to `keys()` also failed because the TypeScript DOM typings in this environment did not expose `keys()` on `FileSystemDirectoryHandle` either.
+- I fixed that by casting the directory handle to an `AsyncIterable<[string, FileSystemHandle]>` and iterating over that view instead.
+
+### What I learned
+- The frontend can stay extremely small if the demo shell is just plain DOM and a session bootstrap.
+- It is better to keep the websocket session client generic and let the demo compose it with the tool broker.
+- TypeScript DOM typings for newer browser file-system APIs can be narrower than the browser runtime surface, so a small compatibility cast is sometimes necessary in worker code.
+
+### What was tricky to build
+- The main sharp edge was making the demo feel real without dragging in a full frontend framework.
+- Another tricky point was getting the browser session client, broker, and demo shell to share responsibility cleanly: the demo handles user prompts, the session client handles websocket transport, and the broker handles tool dispatch/results.
+- The OPFS worker needed a typing workaround that stayed honest about runtime behavior but still satisfied the compiler.
+
+### What warrants a second pair of eyes
+- Review the DOM demo flow to make sure it remains simple enough for the next contributor to extend.
+- Confirm the websocket session client still makes sense as the broker transport adapter once a real UI framework is introduced.
+- Review the OPFS worker type cast to make sure it does not hide a future portability issue across browsers or build targets.
+
+### What should be done in the future
+- Refresh the reMarkable bundle after the demo UI wiring so the published docs match the current code.
+- Keep the demo shell lightweight unless a real frontend framework becomes necessary.
+- If the browser file-system APIs continue to lag in DOM typings, add a small type wrapper rather than scattering casts.
+
+### Code review instructions
+- Start in `frontend/src/demo/browser-chat-demo.ts` and `frontend/src/main.ts`.
+- Then review `frontend/src/app/ChatView.tsx` and `frontend/src/session/websocket-session-client.ts`.
+- Check `frontend/src/workers/opfs.worker.ts` for the typing fix that unblocked `tsc`.
+- Validate with `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit` and `go test ./...`.
+
+### Technical details
+- Demo bootstrap: `frontend/src/main.ts`
+- Demo shell: `frontend/src/demo/browser-chat-demo.ts`
+- HTML entrypoint: `frontend/index.html`
+- TypeScript validation command: `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit`

@@ -788,7 +788,7 @@ Rejected for this ticket. The POC should prove the execution split first. Policy
 
 ### File references and suggested implementation targets
 
-The workspace now contains the first implementation scaffold. The files below are the current anchors for the backend/frontend split and the next likely places to change as the POC matures:
+The workspace now contains the first implementation scaffold plus a working websocket/browser transport and browser demo shell. The files below are the current anchors for the backend/frontend split and the next likely places to change as the POC matures:
 
 - `backend/cmd/chatd/main.go`
 - `backend/internal/chat/browserbridge.go`
@@ -800,6 +800,13 @@ The workspace now contains the first implementation scaffold. The files below ar
 - `backend/internal/chat/router.go`
 - `backend/internal/chat/service.go`
 - `backend/internal/chat/service_test.go`
+- `backend/internal/chat/websocket.go`
+- `backend/internal/chat/websocket_test.go`
+- `frontend/index.html`
+- `frontend/src/demo/browser-chat-demo.ts`
+- `frontend/src/demo/index.ts`
+- `frontend/src/main.ts`
+- `frontend/src/session/websocket-session-client.ts`
 - `frontend/src/tool-broker/broker.ts`
 - `frontend/src/tool-broker/contracts.ts`
 - `frontend/src/tool-broker/opfs-executors.ts`
