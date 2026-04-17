@@ -5,36 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
-
-type recordingClientBridge struct {
-	calls []clientCall
-}
-
-type clientCall struct {
-	sessionID string
-	toolName  string
-	callID    string
-	args      map[string]any
-}
-
-func (r *recordingClientBridge) Call(_ context.Context, sessionID string, tool ToolManifest, callID string, args json.RawMessage) (ToolResultEnvelope, error) {
-	decoded := decodeArgs(args)
-	r.calls = append(r.calls, clientCall{
-		sessionID: sessionID,
-		toolName:  tool.Name,
-		callID:    callID,
-		args:      decoded,
-	})
-	return ToolResultEnvelope{
-		ID:   callID,
-		Type: "tool.result",
-		OK:   true,
-		Output: map[string]any{
-			"summary": "Found 2 TODO matches in the mock project.",
-		},
-	}, nil
-}
 
 type recordingServerRunner struct {
 	calls []serverCall
@@ -62,27 +34,49 @@ func (r *recordingServerRunner) Run(_ context.Context, tool ToolManifest, callID
 	}, nil
 }
 
-func TestHandleUserMessageRoutesClientTool(t *testing.T) {
+func TestHandleUserMessageRoutesClientToolThroughBrowserBridge(t *testing.T) {
 	t.Parallel()
 
-	client := &recordingClientBridge{}
-	svc := NewService(NewRouter(&recordingServerRunner{}, client))
+	browser := NewBrowserBridge()
+	svc := NewService(NewRouter(&recordingServerRunner{}, browser))
 	session := svc.CreateSession()
+	conn := browser.Connect(session.ID)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		select {
+		case req := <-conn.Requests:
+			if req.Tool != "wasm.run_task" {
+				t.Errorf("tool = %s, want wasm.run_task", req.Tool)
+				return
+			}
+			if got := decodeArgs(req.Args)["task"]; got != "grep" {
+				t.Errorf("task = %#v, want grep", got)
+				return
+			}
+			if err := conn.SubmitResult(ToolResultEnvelope{
+				ID:   req.ID,
+				Type: "tool.result",
+				OK:   true,
+				Output: map[string]any{
+					"summary": "Found 2 TODO matches in the mock project.",
+				},
+				Meta: map[string]any{"tool": req.Tool},
+			}); err != nil {
+				t.Errorf("SubmitResult() error = %v", err)
+			}
+		case <-time.After(2 * time.Second):
+			t.Errorf("timed out waiting for browser request")
+		}
+	}()
 
 	turn, err := svc.HandleUserMessage(context.Background(), session.ID, "Search my local project for TODOs.")
 	if err != nil {
 		t.Fatalf("HandleUserMessage() error = %v", err)
 	}
+	<-done
 
-	if got := len(client.calls); got != 1 {
-		t.Fatalf("expected 1 client call, got %d", got)
-	}
-	if got := client.calls[0].toolName; got != "wasm.run_task" {
-		t.Fatalf("expected wasm.run_task, got %s", got)
-	}
-	if got := client.calls[0].args["task"]; got != "grep" {
-		t.Fatalf("expected grep task, got %#v", got)
-	}
 	if !strings.Contains(turn.AssistantText, "Found 2 TODO matches") {
 		t.Fatalf("assistant text = %q, want TODO summary", turn.AssistantText)
 	}
@@ -91,8 +85,9 @@ func TestHandleUserMessageRoutesClientTool(t *testing.T) {
 func TestHandleUserMessageRoutesServerTool(t *testing.T) {
 	t.Parallel()
 
+	browser := NewBrowserBridge()
 	server := &recordingServerRunner{}
-	svc := NewService(NewRouter(server, &recordingClientBridge{}))
+	svc := NewService(NewRouter(server, browser))
 	session := svc.CreateSession()
 
 	turn, err := svc.HandleUserMessage(context.Background(), session.ID, "Summarize the conversation.")
@@ -108,5 +103,18 @@ func TestHandleUserMessageRoutesServerTool(t *testing.T) {
 	}
 	if !strings.Contains(turn.AssistantText, "Short mock conversation summary") {
 		t.Fatalf("assistant text = %q, want conversation summary", turn.AssistantText)
+	}
+}
+
+func TestClientToolFailsWhenBrowserIsDisconnected(t *testing.T) {
+	t.Parallel()
+
+	browser := NewBrowserBridge()
+	svc := NewService(NewRouter(&recordingServerRunner{}, browser))
+	session := svc.CreateSession()
+
+	_, err := svc.HandleUserMessage(context.Background(), session.ID, "Search my local project for TODOs.")
+	if err == nil || !strings.Contains(err.Error(), "browser client is connected") {
+		t.Fatalf("expected browser unavailable error, got %v", err)
 	}
 }

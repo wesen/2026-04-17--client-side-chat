@@ -14,7 +14,8 @@ func main() {
 		addr = ":8080"
 	}
 
-	svc := chat.NewService(chat.NewRouter(chat.NewMockServerRunner(), chat.NewLoopbackClientBridge()))
+	browserBridge := chat.NewBrowserBridge()
+	svc := chat.NewService(chat.NewRouter(chat.NewMockServerRunner(), browserBridge))
 	server := chat.NewHTTPServer(svc)
 
 	log.Printf("chatd listening on %s", addr)

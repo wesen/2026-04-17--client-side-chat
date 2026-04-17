@@ -32,7 +32,8 @@ WhenToUse: ""
 - [x] Scaffold the Go backend service, mock model, and router
 - [x] Scaffold the frontend tool-broker contracts and worker stubs
 - [x] Add backend unit tests for routing and mock-model flow
-- [ ] Wire a real browser transport and replace the loopback client bridge
+- [x] Wire a browser session bridge that replaces the loopback client bridge
+- [x] Add worker-backed browser executors for OPFS and WASM tasks
 
 ## Completed
 

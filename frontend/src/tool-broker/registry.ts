@@ -1,4 +1,10 @@
 import type { ToolManifest } from "./contracts";
+import {
+  createOpfsListDirExecutor,
+  createOpfsReadTextExecutor,
+  createOpfsWriteTextExecutor,
+} from "./opfs-executors";
+import { createWasmTaskExecutor } from "./wasm-executors";
 
 export type ToolExecutor = (args: Record<string, unknown>) => Promise<unknown>;
 
@@ -23,9 +29,16 @@ export class ToolRegistry {
   }
 }
 
-function notImplemented(toolName: string): ToolExecutor {
-  return async () => {
-    throw new Error(`${toolName} is scaffolded but not yet wired to browser capabilities`);
+function withSummary(toolName: string, executor: ToolExecutor): ToolExecutor {
+  return async (args) => {
+    const output = await executor(args);
+    if (typeof output === "object" && output !== null) {
+      return output;
+    }
+    return {
+      tool: toolName,
+      value: output,
+    };
   };
 }
 
@@ -40,7 +53,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "model_visible",
       capability: "opfs",
     },
-    execute: notImplemented("opfs.list_dir"),
+    execute: withSummary("opfs.list_dir", createOpfsListDirExecutor()),
   });
 
   registry.register({
@@ -51,7 +64,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "model_visible",
       capability: "opfs",
     },
-    execute: notImplemented("opfs.read_text"),
+    execute: withSummary("opfs.read_text", createOpfsReadTextExecutor()),
   });
 
   registry.register({
@@ -62,7 +75,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "local_only",
       capability: "opfs",
     },
-    execute: notImplemented("opfs.write_text"),
+    execute: withSummary("opfs.write_text", createOpfsWriteTextExecutor()),
   });
 
   registry.register({
@@ -73,7 +86,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "local_only",
       capability: "wasm_worker",
     },
-    execute: notImplemented("wasm.run_task"),
+    execute: withSummary("wasm.run_task", createWasmTaskExecutor()),
   });
 
   return registry;

@@ -315,7 +315,7 @@ The important boundary is still preserved: the backend owns the conversation and
 
 **Inferred user intent:** Move from design docs into the first runnable implementation, while keeping the architecture simple and mocked.
 
-**Commit (code):** N/A — not committed yet
+**Commit (code):** 96a791f — "Scaffold backend and frontend tool broker"
 
 ### What I did
 - Created `go.mod` for a local Go module named `clientsidechat`.

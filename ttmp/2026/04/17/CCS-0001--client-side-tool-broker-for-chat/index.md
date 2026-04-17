@@ -16,8 +16,12 @@ RelatedFiles:
       Note: Canonical Go-side tool manifest and envelope types
     - Path: backend/internal/chat/http.go
       Note: JSON API used to create sessions and post chat messages
+    - Path: backend/internal/chat/browserbridge.go
+      Note: In-memory browser session bridge used by the proof of concept
+    - Path: backend/internal/chat/browserbridge_test.go
+      Note: Bridge tests that exercise browser-style request/result round-trips
     - Path: backend/internal/chat/mockbridge.go
-      Note: Loopback bridge that stands in for the browser-side broker during the scaffold phase
+      Note: Deterministic server-side mock runner used by the proof of concept
     - Path: backend/internal/chat/mockmodel.go
       Note: Deterministic prompt-to-tool planner used by the proof of concept
     - Path: backend/internal/chat/router.go
@@ -30,8 +34,20 @@ RelatedFiles:
       Note: Frontend broker singleton scaffold for routed tool execution
     - Path: frontend/src/tool-broker/contracts.ts
       Note: Browser-side envelope vocabulary mirrored from the Go backend
+    - Path: frontend/src/tool-broker/opfs-executors.ts
+      Note: Browser OPFS executors backed by dedicated workers
     - Path: frontend/src/tool-broker/registry.ts
       Note: Registry of browser-capability tool definitions
+    - Path: frontend/src/tool-broker/worker-client.ts
+      Note: Generic worker request helper used by the browser executors
+    - Path: frontend/src/tool-broker/wasm-executors.ts
+      Note: Browser WASM executor backed by a dedicated worker
+    - Path: frontend/src/workers/opfs.worker.ts
+      Note: Dedicated worker that performs OPFS list/read/write operations
+    - Path: frontend/src/workers/parser.worker.ts
+      Note: Dedicated worker for tokenization, parse, and index transforms
+    - Path: frontend/src/workers/wasm.worker.ts
+      Note: Dedicated worker that performs local compute tasks
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
       Note: Chronological ticket changelog
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/design-doc/01-client-side-tool-broker-design-and-implementation-guide.md

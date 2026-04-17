@@ -10,8 +10,12 @@ DocType: design-doc
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: backend/internal/chat/browserbridge.go
+      Note: In-memory browser session bridge that replaces the loopback bridge
+    - Path: backend/internal/chat/browserbridge_test.go
+      Note: Bridge tests for browser-style request/result round-trips
     - Path: backend/internal/chat/mockbridge.go
-      Note: Loopback client bridge used until the real browser broker exists
+      Note: Deterministic server-side mock runner used by the proof of concept
     - Path: backend/internal/chat/mockmodel.go
       Note: Mock LLM adapter used to keep the proof of concept deterministic
     - Path: backend/internal/chat/router.go
@@ -20,10 +24,20 @@ RelatedFiles:
       Note: Concrete implementation of the session orchestration and turn loop described in the design
     - Path: frontend/src/tool-broker/broker.ts
       Note: Frontend broker scaffold that will become the browser-side execution plane
+    - Path: frontend/src/tool-broker/opfs-executors.ts
+      Note: Browser OPFS executors backed by dedicated workers
+    - Path: frontend/src/tool-broker/registry.ts
+      Note: Registry of browser-capability tool definitions
+    - Path: frontend/src/tool-broker/worker-client.ts
+      Note: Generic worker request helper used by the browser executors
+    - Path: frontend/src/tool-broker/wasm-executors.ts
+      Note: Browser WASM executor backed by a dedicated worker
     - Path: frontend/src/workers/opfs.worker.ts
-      Note: OPFS worker message contract and stubbed execution boundary
+      Note: OPFS worker message contract and execution boundary
+    - Path: frontend/src/workers/parser.worker.ts
+      Note: Parser worker message contract and execution boundary
     - Path: frontend/src/workers/wasm.worker.ts
-      Note: WASM worker message contract and stubbed execution boundary
+      Note: WASM worker message contract and execution boundary
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
       Note: Chronological record of the documentation work completed so far
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/index.md
@@ -774,20 +788,27 @@ Rejected for this ticket. The POC should prove the execution split first. Policy
 
 ### File references and suggested implementation targets
 
-The current workspace has no runtime source tree yet. If the implementation starts in this repository, these are the first files I would expect to exist:
+The workspace now contains the first implementation scaffold. The files below are the current anchors for the backend/frontend split and the next likely places to change as the POC matures:
 
 - `backend/cmd/chatd/main.go`
-- `backend/internal/chat/session.go`
+- `backend/internal/chat/browserbridge.go`
+- `backend/internal/chat/browserbridge_test.go`
+- `backend/internal/chat/contracts.go`
+- `backend/internal/chat/http.go`
+- `backend/internal/chat/mockbridge.go`
 - `backend/internal/chat/mockmodel.go`
 - `backend/internal/chat/router.go`
-- `backend/internal/chat/contracts.go`
-- `backend/internal/chat/transport/ws.go`
+- `backend/internal/chat/service.go`
+- `backend/internal/chat/service_test.go`
 - `frontend/src/tool-broker/broker.ts`
 - `frontend/src/tool-broker/contracts.ts`
+- `frontend/src/tool-broker/opfs-executors.ts`
 - `frontend/src/tool-broker/registry.ts`
+- `frontend/src/tool-broker/worker-client.ts`
+- `frontend/src/tool-broker/wasm-executors.ts`
 - `frontend/src/workers/opfs.worker.ts`
-- `frontend/src/workers/wasm.worker.ts`
 - `frontend/src/workers/parser.worker.ts`
+- `frontend/src/workers/wasm.worker.ts`
 - `frontend/src/app/ChatView.tsx`
 
-These paths are implementation guidance, not evidence of files that already exist.
+These paths are implementation guidance and review anchors, not a statement that everything is production-ready.
