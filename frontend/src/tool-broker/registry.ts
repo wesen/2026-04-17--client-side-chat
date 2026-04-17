@@ -3,10 +3,11 @@ import {
   createOpfsListDirExecutor,
   createOpfsReadTextExecutor,
   createOpfsWriteTextExecutor,
+  type ToolExecutionResult,
 } from "./opfs-executors";
 import { createWasmTaskExecutor } from "./wasm-executors";
 
-export type ToolExecutor = (args: Record<string, unknown>) => Promise<unknown>;
+export type ToolExecutor = (args: Record<string, unknown>) => Promise<ToolExecutionResult>;
 
 export interface ToolDefinition {
   manifest: ToolManifest;
@@ -29,16 +30,14 @@ export class ToolRegistry {
   }
 }
 
-function withSummary(toolName: string, executor: ToolExecutor): ToolExecutor {
+function withExecutionSummary(toolName: string, executor: ToolExecutor): ToolExecutor {
   return async (args) => {
-    const output = await executor(args);
-    if (typeof output === "object" && output !== null) {
-      return output;
+    const result = await executor(args);
+    if (!result.meta) {
+      result.meta = {};
     }
-    return {
-      tool: toolName,
-      value: output,
-    };
+    result.meta.tool = result.meta.tool ?? toolName;
+    return result;
   };
 }
 
@@ -53,7 +52,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "model_visible",
       capability: "opfs",
     },
-    execute: withSummary("opfs.list_dir", createOpfsListDirExecutor()),
+    execute: withExecutionSummary("opfs.list_dir", createOpfsListDirExecutor()),
   });
 
   registry.register({
@@ -64,7 +63,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "model_visible",
       capability: "opfs",
     },
-    execute: withSummary("opfs.read_text", createOpfsReadTextExecutor()),
+    execute: withExecutionSummary("opfs.read_text", createOpfsReadTextExecutor()),
   });
 
   registry.register({
@@ -75,7 +74,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "local_only",
       capability: "opfs",
     },
-    execute: withSummary("opfs.write_text", createOpfsWriteTextExecutor()),
+    execute: withExecutionSummary("opfs.write_text", createOpfsWriteTextExecutor()),
   });
 
   registry.register({
@@ -86,7 +85,7 @@ export function createDefaultToolRegistry(): ToolRegistry {
       visibility: "local_only",
       capability: "wasm_worker",
     },
-    execute: withSummary("wasm.run_task", createWasmTaskExecutor()),
+    execute: withExecutionSummary("wasm.run_task", createWasmTaskExecutor()),
   });
 
   return registry;

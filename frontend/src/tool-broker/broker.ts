@@ -1,4 +1,4 @@
-import { createDefaultToolRegistry, type ToolRegistry } from "./registry";
+import { createDefaultToolRegistry, type ToolRegistry, type ToolExecutor } from "./registry";
 import type {
   SessionCapabilitiesEnvelope,
   ToolError,
@@ -10,12 +10,18 @@ export interface ToolTransport {
   send(message: ToolResultEnvelope | SessionCapabilitiesEnvelope): void | Promise<void>;
 }
 
+export interface ToolBrokerObserver {
+  onIncoming?(message: SessionCapabilitiesEnvelope | ToolRequestEnvelope): void;
+  onOutgoing?(message: SessionCapabilitiesEnvelope | ToolResultEnvelope): void;
+}
+
 export class FrontendToolBroker {
   private capabilities: SessionCapabilitiesEnvelope | null = null;
 
   constructor(
     private readonly transport: ToolTransport,
     private readonly registry: ToolRegistry = createDefaultToolRegistry(),
+    private readonly observer: ToolBrokerObserver = {},
   ) {}
 
   setCapabilities(message: SessionCapabilitiesEnvelope): void {
@@ -28,11 +34,13 @@ export class FrontendToolBroker {
 
   async handle(message: unknown): Promise<void> {
     if (isSessionCapabilitiesEnvelope(message)) {
+      this.observer.onIncoming?.(message);
       this.setCapabilities(message);
       return;
     }
 
     if (isToolRequestEnvelope(message)) {
+      this.observer.onIncoming?.(message);
       await this.handleToolRequest(message);
     }
   }
@@ -40,7 +48,7 @@ export class FrontendToolBroker {
   private async handleToolRequest(message: ToolRequestEnvelope): Promise<void> {
     const definition = this.registry.get(message.tool);
     if (!definition) {
-      await this.transport.send({
+      const response: ToolResultEnvelope = {
         id: message.id,
         type: "tool.result",
         ok: false,
@@ -48,31 +56,43 @@ export class FrontendToolBroker {
           code: "UNKNOWN_TOOL",
           message: `The browser broker does not know ${message.tool}`,
         },
-      });
+      };
+      this.observer.onOutgoing?.(response);
+      await this.transport.send(response);
       return;
     }
 
     const started = performance.now();
     try {
-      const output = await definition.execute(message.args);
-      await this.transport.send({
+      const execution = await definition.execute(message.args);
+      const response: ToolResultEnvelope = {
         id: message.id,
         type: "tool.result",
         ok: true,
-        output,
+        output: execution.output,
+        meta: {
+          duration_ms: performance.now() - started,
+          tool: definition.manifest.name,
+          visibility: definition.manifest.visibility,
+          ...execution.meta,
+        },
+      };
+      this.observer.onOutgoing?.(response);
+      await this.transport.send(response);
+    } catch (error) {
+      const response: ToolResultEnvelope = {
+        id: message.id,
+        type: "tool.result",
+        ok: false,
+        error: normalizeToolError(error),
         meta: {
           duration_ms: performance.now() - started,
           tool: definition.manifest.name,
           visibility: definition.manifest.visibility,
         },
-      });
-    } catch (error) {
-      await this.transport.send({
-        id: message.id,
-        type: "tool.result",
-        ok: false,
-        error: normalizeToolError(error),
-      });
+      };
+      this.observer.onOutgoing?.(response);
+      await this.transport.send(response);
     }
   }
 }

@@ -70,6 +70,10 @@ async function listDirectory(root: FileSystemDirectoryHandle, path: string, limi
     path: normalizePath(path),
     entries,
     truncated: entries.length >= limit,
+    opfs: {
+      root: "navigator.storage.getDirectory",
+      listed: entries.length,
+    },
   };
 }
 
@@ -83,6 +87,11 @@ async function readTextFile(root: FileSystemDirectoryHandle, path: string, maxBy
     path: normalizePath(path),
     text,
     truncated: file.size > maxBytes,
+    opfs: {
+      root: "navigator.storage.getDirectory",
+      bytes_read: Math.min(file.size, maxBytes),
+      file_size: file.size,
+    },
   };
 }
 
@@ -95,6 +104,11 @@ async function writeTextFile(root: FileSystemDirectoryHandle, path: string, text
   return {
     path: normalizePath(path),
     bytes_written: new TextEncoder().encode(text).byteLength,
+    opfs: {
+      root: "navigator.storage.getDirectory",
+      created_or_updated: true,
+      write_path: normalizePath(path),
+    },
   };
 }
 

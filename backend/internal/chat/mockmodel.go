@@ -54,6 +54,25 @@ func planFromUserPrompt(prompt string, tools []ToolManifest) MockModelResponse {
 		}
 	}
 
+	if (strings.Contains(lower, "browse") || strings.Contains(lower, "list opfs") || strings.Contains(lower, "show opfs")) && toolAvailable(tools, "opfs.list_dir") {
+		path := extractPath(prompt)
+		if path == "" {
+			path = "/"
+		}
+		args, _ := json.Marshal(map[string]any{
+			"path":  path,
+			"limit": 100,
+		})
+		return MockModelResponse{
+			Kind: MockResponseToolCall,
+			ToolCall: &MockToolCall{
+				ID:   nextCallID("list"),
+				Tool: "opfs.list_dir",
+				Args: args,
+			},
+		}
+	}
+
 	if strings.Contains(lower, "todo") || strings.Contains(lower, "search") {
 		if toolAvailable(tools, "wasm.run_task") {
 			return MockModelResponse{

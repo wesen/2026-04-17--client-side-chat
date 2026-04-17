@@ -1,7 +1,8 @@
 import { runWorkerTask } from "./worker-client";
+import type { ToolExecutionResult } from "./opfs-executors";
 
 export function createWasmTaskExecutor() {
-  return async (args: Record<string, unknown>) => {
+  return async (args: Record<string, unknown>): Promise<ToolExecutionResult> => {
     const request = {
       id: crypto.randomUUID(),
       task: String(args.task ?? "unknown"),
@@ -12,6 +13,9 @@ export function createWasmTaskExecutor() {
     if (!response.ok) {
       throw new Error(response.error?.message ?? "WASM task failed");
     }
-    return response.output;
+    return {
+      output: response.output,
+      meta: response.meta,
+    };
   };
 }

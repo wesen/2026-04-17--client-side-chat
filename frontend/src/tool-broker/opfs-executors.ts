@@ -1,7 +1,19 @@
 import { runWorkerTask } from "./worker-client";
 
+export interface ToolExecutionResult {
+  output: unknown;
+  meta?: Record<string, unknown>;
+}
+
+function asExecutionResult(response: Awaited<ReturnType<typeof runWorkerTask>>): ToolExecutionResult {
+  return {
+    output: response.output,
+    meta: response.meta,
+  };
+}
+
 export function createOpfsListDirExecutor() {
-  return async (args: Record<string, unknown>) => {
+  return async (args: Record<string, unknown>): Promise<ToolExecutionResult> => {
     const request = {
       id: crypto.randomUUID(),
       task: "list_dir",
@@ -12,12 +24,12 @@ export function createOpfsListDirExecutor() {
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS list_dir failed");
     }
-    return response.output;
+    return asExecutionResult(response);
   };
 }
 
 export function createOpfsReadTextExecutor() {
-  return async (args: Record<string, unknown>) => {
+  return async (args: Record<string, unknown>): Promise<ToolExecutionResult> => {
     const request = {
       id: crypto.randomUUID(),
       task: "read_text",
@@ -28,12 +40,12 @@ export function createOpfsReadTextExecutor() {
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS read_text failed");
     }
-    return response.output;
+    return asExecutionResult(response);
   };
 }
 
 export function createOpfsWriteTextExecutor() {
-  return async (args: Record<string, unknown>) => {
+  return async (args: Record<string, unknown>): Promise<ToolExecutionResult> => {
     const request = {
       id: crypto.randomUUID(),
       task: "write_text",
@@ -44,6 +56,6 @@ export function createOpfsWriteTextExecutor() {
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS write_text failed");
     }
-    return response.output;
+    return asExecutionResult(response);
   };
 }
