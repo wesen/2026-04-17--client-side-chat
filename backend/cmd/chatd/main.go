@@ -16,7 +16,7 @@ func main() {
 
 	browserBridge := chat.NewBrowserBridge()
 	svc := chat.NewService(chat.NewRouter(chat.NewMockServerRunner(), browserBridge))
-	server := chat.NewHTTPServer(svc)
+	server := chat.NewHTTPServer(svc, browserBridge)
 
 	log.Printf("chatd listening on %s", addr)
 	if err := http.ListenAndServe(addr, server.Handler()); err != nil {

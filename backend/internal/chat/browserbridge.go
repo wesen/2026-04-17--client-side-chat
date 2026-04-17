@@ -67,10 +67,18 @@ func (b *BrowserBridge) PublishCapabilities(sessionID string, capabilities Sessi
 
 func (b *BrowserBridge) Disconnect(sessionID string) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
+	session, ok := b.sessions[sessionID]
+	if !ok {
+		b.mu.Unlock()
+		return
+	}
+	session.connected = false
+	pending := session.responses
+	session.responses = make(map[string]chan ToolResultEnvelope)
+	b.mu.Unlock()
 
-	if session, ok := b.sessions[sessionID]; ok {
-		session.connected = false
+	for _, responseCh := range pending {
+		close(responseCh)
 	}
 }
 
@@ -119,7 +127,10 @@ func (b *BrowserBridge) Call(ctx context.Context, sessionID string, tool ToolMan
 	}
 
 	select {
-	case result := <-resultCh:
+	case result, ok := <-resultCh:
+		if !ok {
+			return unavailableToolResult(callID, tool.Name), errors.New("browser session disconnected while awaiting a tool result")
+		}
 		return result, nil
 	case <-ctx.Done():
 		return timeoutToolResult(callID, tool.Name, ctx.Err())

@@ -7,11 +7,12 @@ import (
 )
 
 type HTTPServer struct {
-	svc *Service
+	svc    *Service
+	bridge *BrowserBridge
 }
 
-func NewHTTPServer(svc *Service) *HTTPServer {
-	return &HTTPServer{svc: svc}
+func NewHTTPServer(svc *Service, bridge *BrowserBridge) *HTTPServer {
+	return &HTTPServer{svc: svc, bridge: bridge}
 }
 
 func (h *HTTPServer) Handler() http.Handler {
@@ -83,6 +84,8 @@ func (h *HTTPServer) handleSession(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, turn)
+	case "ws":
+		h.handleBrowserWebSocket(w, r, sessionID)
 	default:
 		http.NotFound(w, r)
 	}
