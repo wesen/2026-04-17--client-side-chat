@@ -14,10 +14,16 @@ RelatedFiles:
       Note: Implementation step recorded in the diary
     - Path: backend/internal/chat/service_test.go
       Note: Validation evidence captured in the diary
+    - Path: frontend/src/demo/browser-chat-demo.ts
+      Note: Diagnostics modal and OPFS browse shortcut discussed in Step 9
     - Path: frontend/src/tool-broker/broker.ts
       Note: Frontend scaffold referenced by the implementation diary
     - Path: frontend/src/tool-broker/contracts.ts
       Note: Frontend contract layer referenced by the implementation diary
+    - Path: frontend/src/workers/opfs.worker.ts
+      Note: OPFS metadata surfaced in Step 9
+    - Path: frontend/src/workers/wasm.worker.ts
+      Note: WASM module initialization telemetry discussed in Step 9
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
       Note: Record of the playbook creation
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/design-doc/01-client-side-tool-broker-design-and-implementation-guide.md
@@ -32,6 +38,7 @@ LastUpdated: 2026-04-17T08:59:26.597070339-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -826,3 +833,82 @@ The important part here is operational clarity: the code was already there, but 
 - tmux session: `ccs-0001-demo`
 - Browser smoke-test URL: `http://localhost:8090/`
 - Worker bundle outputs: `frontend/dist/workers/opfs.worker.js`, `frontend/dist/workers/wasm.worker.js`, `frontend/dist/workers/parser.worker.js`
+
+## Step 9: Add diagnostics for OPFS browsing and real WASM runtime telemetry
+
+This step added the extra visibility the browser demo needed for debugging. The demo now has a Diagnostics modal that surfaces the latest tool request/result events, the raw worker metadata, and a readable record of the most recent browser events. The WASM worker also now instantiates a real demo WebAssembly module on startup and prints a console log when that module is loaded, so Firefox DevTools can show evidence that the worker really initialized a WASM runtime instead of only running plain JavaScript.
+
+This step also made OPFS browsing easier to validate. The mock model now routes prompts like `Browse OPFS /notes` to `opfs.list_dir`, the demo has a dedicated Browse OPFS button, and the diagnostics modal shows the returned directory listing plus the OPFS metadata from the worker. That gives both a user-visible proof path and a lower-level debug path.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Add a browser modal and deeper telemetry so OPFS browsing and WASM execution can be inspected at a lower level.
+
+**Inferred user intent:** Make it obvious, in the UI and the browser console, that the worker-backed local capabilities are really running.
+
+**Commit (code):** 8b56907 — "Add diagnostics modal and wasm runtime telemetry"
+
+### What I did
+- Added a `Diagnostics` button and `<dialog>` modal to the demo shell.
+- Added diagnostic event logging for incoming tool requests, outgoing tool results, and assistant replies.
+- Added a `Browse OPFS` shortcut button and a mock-model route for `opfs.list_dir` prompts.
+- Expanded the worker result metadata so the modal can show lower-level OPFS and WASM details.
+- Added a real demo WebAssembly module bootstrap in `frontend/src/workers/wasm.worker.ts` and a console log on initialization.
+- Confirmed that Firefox/Playwright console output includes the worker log:
+
+  ```text
+  [wasm.worker] demo wasm module initialized {module_bytes: 41, exports: Array(1), init_ms: 0.9}
+  ```
+
+- Verified in the browser that:
+  - `Browse OPFS /notes` returns an `opfs.list_dir` result listing the `notes` directory.
+  - `Search my local project for TODOs.` returns a `wasm.run_task` result and the diagnostics modal shows the WASM module export list and initialization time.
+- Re-ran `go test ./...` and the TypeScript compile after the diagnostics changes.
+
+### Why
+- The demo needed a lower-level inspection path than the regular chat transcript.
+- Real WASM telemetry answers the question “did the worker actually instantiate a WebAssembly module?” instead of making the user infer it from a generic task result.
+- Surfacing OPFS metadata makes it easier to prove that directory listings and file reads/writes are really going through the browser storage API.
+
+### What worked
+- The Diagnostics modal now shows tool request/result history plus worker metadata.
+- Firefox DevTools Console receives the WASM worker initialization log.
+- OPFS browsing via `opfs.list_dir` works and returns a visible directory listing.
+- The browser demo now has a clear path for proving both local capabilities: OPFS and WASM.
+
+### What didn't work
+- The first attempt to route `Browse OPFS /notes` still used the older backend process, so it returned the generic “No mock tool was needed” response until I restarted the tmux session with the updated backend code.
+- That was an environment drift issue rather than a code issue; once the backend was restarted, the new browse route worked.
+
+### What I learned
+- Worker metadata is much more useful when it is surfaced in the UI, not just left in the browser console.
+- A tiny real WebAssembly module is enough to make the demo materially more trustworthy than a JS-only worker shim.
+- The diagnostics modal is a good place to unify user-facing and low-level debug evidence.
+
+### What was tricky to build
+- The main sharp edge was keeping the worker telemetry useful without turning the demo into a debugging dashboard.
+- Another tricky point was ensuring the Diagnostics modal showed data from the actual worker path instead of only the backend result.
+- The OPFS browse route depended on restarting the tmux backend, which was easy to forget because the code change had landed before the process refresh.
+
+### What warrants a second pair of eyes
+- Review the minimal WebAssembly bytecode used for the demo module to make sure it is stable and understandable.
+- Confirm the diagnostics event stream remains readable as more local tools are added.
+- Check whether the `Browse OPFS` shortcut should eventually become a real tree explorer instead of just a prompt shortcut.
+
+### What should be done in the future
+- Keep the Diagnostics modal lightweight and focused on a few high-value signals.
+- If more worker detail is needed later, extend the existing metadata rather than adding a separate debug channel.
+- If the OPFS browsing workflow grows, replace the prompt shortcut with a direct explorer panel.
+
+### Code review instructions
+- Start in `frontend/src/demo/browser-chat-demo.ts`, `frontend/src/tool-broker/broker.ts`, and `frontend/src/workers/wasm.worker.ts`.
+- Then review `frontend/src/workers/opfs.worker.ts` and `backend/internal/chat/mockmodel.go` for the browse route and OPFS metadata.
+- Validate by opening the demo, clicking `Browse OPFS`, and checking the Diagnostics modal plus the Firefox console log.
+
+### Technical details
+- Diagnostics modal: `frontend/src/demo/browser-chat-demo.ts`
+- WASM module log: Firefox/DevTools Console message from `frontend/src/workers/wasm.worker.ts`
+- OPFS browse path: `Browse OPFS /notes` → `opfs.list_dir`
+- Browser check: Diagnostics modal + `tool.result` metadata + console output

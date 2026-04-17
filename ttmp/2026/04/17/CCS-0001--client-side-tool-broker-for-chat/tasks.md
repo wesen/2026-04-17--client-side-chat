@@ -43,6 +43,9 @@ WhenToUse: ""
 - [x] Create the browser demo run playbook
 - [x] Launch the demo in tmux on port 8090
 - [x] Verify the browser smoke test end-to-end
+- [x] Add a diagnostics modal for OPFS/WASM telemetry
+- [x] Emit low-level WASM runtime initialization logs
+- [x] Surface OPFS browse metadata in tool results
 
 ## Completed
 
@@ -64,3 +67,4 @@ WhenToUse: ""
 - The run playbook uses `CHATD_ADDR=:8090 go run ./backend/cmd/chatd` and the browser smoke-test URL is `http://localhost:8090/`.
 - The demo backend is currently running in tmux as `ccs-0001-demo`.
 - The simple version intentionally excludes policy-engine complexity and real LLM integration.
+- The Diagnostics modal and Firefox console are the primary places to inspect worker-level telemetry.

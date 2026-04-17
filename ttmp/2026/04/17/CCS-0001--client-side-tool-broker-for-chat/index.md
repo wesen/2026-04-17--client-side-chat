@@ -86,7 +86,9 @@ WhenToUse: ""
 
 This ticket documents the design for a simple proof of concept where the Go backend owns the conversation and the browser owns capability-bound tools such as OPFS and WASM workers. The repository now includes the initial implementation scaffold plus a real websocket/browser transport and a browser demo shell: the Go backend service, the in-memory browser session bridge, worker-backed browser executors, the browser websocket session client, and the DOM-based demo app all exist.
 
-A runnable playbook now shows how to bundle the frontend, start the backend on port 8090, and smoke-test the browser flow from a tab. The main goal is still to validate the routed RPC model with mocked LLM calls and minimal policy. That keeps the first build small while still proving the most important boundary: model → backend router → browser tool broker → backend → model.
+A runnable playbook now shows how to bundle the frontend, start the backend on port 8090, and smoke-test the browser flow from a tab. The demo also has a Diagnostics modal that surfaces low-level OPFS and WASM telemetry, which makes it easy to prove that the worker-backed local capabilities are actually executing.
+
+The main goal is still to validate the routed RPC model with mocked LLM calls and minimal policy. That keeps the first build small while still proving the most important boundary: model → backend router → browser tool broker → backend → model.
 
 ## Key Links
 

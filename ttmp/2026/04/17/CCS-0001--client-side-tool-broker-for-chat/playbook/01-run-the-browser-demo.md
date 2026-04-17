@@ -14,10 +14,18 @@ RelatedFiles:
       Note: Backend entrypoint used by the tmux demo launch
     - Path: backend/internal/chat/http.go
       Note: Backend handler now serves the static demo bundle and API endpoints from one origin
+    - Path: backend/internal/chat/mockmodel.go
+      Note: Prompt routing for Browse OPFS and TODO search flows used by the playbook
     - Path: frontend/src/demo/browser-chat-demo.ts
-      Note: Demo shell that the playbook launches in the browser
+      Note: |-
+        Demo shell that the playbook launches in the browser
+        Demo shell with the Diagnostics modal and OPFS browse shortcut
     - Path: frontend/src/main.ts
       Note: Browser bootstrap built into frontend/dist/main.js
+    - Path: frontend/src/workers/opfs.worker.ts
+      Note: OPFS worker metadata shown by the Diagnostics modal
+    - Path: frontend/src/workers/wasm.worker.ts
+      Note: WASM module initialization log and runtime metadata shown by the Diagnostics modal
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
       Note: Log entry for the playbook creation and verification
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/reference/02-diary.md
@@ -28,6 +36,7 @@ LastUpdated: 2026-04-17T08:59:26.78137053-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -67,6 +76,7 @@ cat > frontend/dist/index.html <<'EOF'
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Client-side tool broker demo</title>
+    <link rel="icon" href="data:," />
   </head>
   <body>
     <div id="app"></div>
@@ -109,10 +119,13 @@ http://localhost:8090/
 - `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit` succeeds
 - the tmux session `ccs-0001-demo` is running `CHATD_ADDR=:8090 go run ./backend/cmd/chatd`
 - `http://localhost:8090/` loads the demo shell
-- sending `Search my local project for TODOs.` produces a backend turn and a tool round trip
+- sending `Browse OPFS /notes` produces an `opfs.list_dir` tool round trip
+- sending `Search my local project for TODOs.` produces a backend turn and a `wasm.run_task` round trip
+- clicking **Diagnostics** shows the low-level worker metadata, including the WASM module export list and initialization time
 
 ## Notes
 
 - The backend and browser demo intentionally share the same origin so the websocket and message endpoints can use the default `window.location.origin`.
 - The demo is intentionally small and DOM-based so it can run without a full frontend framework or dev server.
+- Open Firefox DevTools Console if you want to see the worker initialization log; the demo WASM worker prints a `[wasm.worker] demo wasm module initialized ...` message when it starts.
 - If `go run` fails because `frontend/dist` is missing, repeat the build step before restarting tmux.

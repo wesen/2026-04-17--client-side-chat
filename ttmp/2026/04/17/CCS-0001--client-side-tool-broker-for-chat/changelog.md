@@ -19,6 +19,20 @@ WhenToUse: ""
 
 # Changelog
 
+## 2026-04-17 - Diagnostics modal and WASM telemetry added
+
+- Added a browser Diagnostics modal that shows low-level worker metadata for OPFS and WASM tool calls.
+- Added a real demo WebAssembly module bootstrap and console logging for worker initialization.
+- Added a Browse OPFS shortcut and OPFS browse metadata in tool results.
+- `go test ./...` and the TypeScript compile still pass after the diagnostics changes.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/demo/browser-chat-demo.ts — Browser modal and diagnostics event logging
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/wasm.worker.ts — Demo WebAssembly module bootstrap and console telemetry
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/opfs.worker.ts — OPFS browse metadata surfaced in tool results
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/mockmodel.go — Browse OPFS prompt routing to `opfs.list_dir`
+
 ## 2026-04-17 - Browser demo playbook and tmux smoke test completed
 
 - Added a runnable playbook for building, launching, and smoke-testing the browser demo.
