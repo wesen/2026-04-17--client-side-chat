@@ -397,3 +397,97 @@ The important boundary is still preserved: the backend owns the conversation and
 - Mock client execution: `backend/internal/chat/mockbridge.go`
 - Frontend contract layer: `frontend/src/tool-broker/contracts.ts`, `frontend/src/tool-broker/broker.ts`, `frontend/src/tool-broker/registry.ts`
 - Validation command: `gofmt -w backend/cmd/chatd/main.go backend/internal/chat/*.go && go test ./...`
+
+## Step 5: Replace the loopback bridge with an attachable browser session bridge and worker-backed executors
+
+This step made the browser side feel like a real capability executor instead of a placeholder. The backend now routes client-side tool calls through an attachable in-memory browser bridge with request/result correlation, and the frontend tool registry now uses actual worker-backed executors for OPFS and WASM tasks. The result is still a proof of concept, but the boundary is much closer to the intended production shape.
+
+The most important thing preserved here is the trust split: the Go backend still owns the conversation and the orchestration loop, while browser-only actions are executed behind a narrow transport contract. The browser bridge is in-memory for now, but the request/result flow, pending-call cleanup, and worker execution path are all explicit and testable.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Replace the temporary loopback client bridge with a more realistic browser session bridge and make the frontend executors perform actual worker-backed local tasks.
+
+**Inferred user intent:** Move the POC from pure scaffolding toward a believable end-to-end architecture that still stays simple and mock-friendly.
+
+**Commit (code):** dc724a1 — "Add browser bridge and worker-backed executors"
+
+### What I did
+- Added `backend/internal/chat/browserbridge.go` with:
+  - attachable browser sessions
+  - request/result correlation
+  - timeout handling
+  - disconnect handling
+  - capability publication hooks
+- Added `backend/internal/chat/browserbridge_test.go` to exercise both the unavailable-browser path and a successful request/result round-trip.
+- Switched `backend/cmd/chatd/main.go` to use `NewBrowserBridge()` instead of the old loopback browser bridge.
+- Removed the old loopback browser executor from `backend/internal/chat/mockbridge.go`; that file now only holds the deterministic server-side mock runner.
+- Added `frontend/src/tool-broker/worker-client.ts` as a generic worker request helper.
+- Added `frontend/src/tool-broker/opfs-executors.ts` and `frontend/src/tool-broker/wasm-executors.ts` so the registry can use real worker-backed local executors.
+- Replaced the placeholder worker stubs with actual task handlers in:
+  - `frontend/src/workers/opfs.worker.ts`
+  - `frontend/src/workers/parser.worker.ts`
+  - `frontend/src/workers/wasm.worker.ts`
+- Updated `frontend/src/tool-broker/registry.ts` to wire the new executors into the default tool registry.
+- Updated the ticket docs to match the new file layout and task state.
+- Refreshed the reMarkable bundle with the updated docs so the published artifact stays in sync with the new bridge/executor scaffold.
+- Ran `gofmt -w backend/cmd/chatd/main.go backend/internal/chat/*.go && go test ./...`.
+- Checked for a local TypeScript compiler with `which tsc || true`; the environment had no `tsc` binary available, so the frontend changes were validated by source review rather than by a local TS compile.
+
+### Why
+- The loopback bridge was only useful for bootstrap. The browser bridge makes the backend/client contract explicit and much closer to how a real browser session will behave.
+- Worker-backed executors prove the local execution model: the browser broker can dispatch OPFS and compute tasks without the backend needing to know the implementation details.
+- Moving the worker logic into helper modules keeps the broker itself thin and readable.
+
+### What worked
+- `go test ./...` still passes after the bridge swap.
+- The browser bridge tests verify both the failure mode and the request/result round trip.
+- The frontend registry now points at real executor functions instead of `NOT_IMPLEMENTED` stubs.
+- The OPFS worker now performs actual list/read/write operations when the browser APIs are available.
+- The WASM worker now performs deterministic local compute tasks such as grep, tokenize, embed, and transcode.
+- The reMarkable bundle was refreshed after the bridge/executor changes, so the remote artifact matches the current ticket state.
+
+### What didn't work
+- A local TypeScript compiler was not available in the environment:
+
+  ```text
+  # from: which tsc || true
+  (no output)
+  ```
+
+- Because of that, I could not run a full TS compile check on the frontend files in this session.
+
+### What I learned
+- The browser bridge is easiest to reason about when it is attachable and request/response based rather than hidden inside the tool router.
+- A small `runWorkerTask` helper removes a lot of repetitive worker plumbing.
+- It is useful to keep the OPFS and compute executors separate even if the worker code is still relatively small.
+
+### What was tricky to build
+- The main sharp edge was preserving the clean backend/browser split while still making the browser side realistic enough to test.
+- Another tricky point was keeping the worker code browser-friendly without assuming a bundler/runtime beyond standard module workers.
+- The bridge needed careful correlation handling so pending requests are cleaned up on completion or timeout.
+
+### What warrants a second pair of eyes
+- Confirm that the in-memory browser bridge is the right intermediate step before introducing a real websocket transport.
+- Review the OPFS worker path handling and write path creation semantics.
+- Review the worker helper and executor wiring to make sure the browser build tooling will accept `new URL(..., import.meta.url)` module-worker imports.
+
+### What should be done in the future
+- Replace the in-memory browser bridge with the real websocket/browser transport.
+- Add a frontend build/test pass once the repo has a TypeScript toolchain.
+- Extend the worker-backed executors with richer local file and parsing operations as needed.
+
+### Code review instructions
+- Start in `backend/internal/chat/browserbridge.go` and `backend/internal/chat/browserbridge_test.go`.
+- Then review `frontend/src/tool-broker/worker-client.ts`, `frontend/src/tool-broker/opfs-executors.ts`, and `frontend/src/tool-broker/wasm-executors.ts`.
+- Finally inspect `frontend/src/workers/opfs.worker.ts` and `frontend/src/workers/wasm.worker.ts` to confirm the worker contracts match the registry.
+- Validate with `go test ./...`.
+
+### Technical details
+- Browser bridge API: `Connect`, `PublishCapabilities`, `SubmitResult`, `Disconnect`, `Call`
+- Worker helper: `runWorkerTask(workerUrl, request, timeoutMs)`
+- OPFS task handlers: `list_dir`, `read_text`, `write_text`
+- WASM task handlers: `grep`, `tokenize`, `embed`, `transcode`
+- Validation command: `gofmt -w backend/cmd/chatd/main.go backend/internal/chat/*.go && go test ./...`

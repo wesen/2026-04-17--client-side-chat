@@ -72,3 +72,30 @@ WhenToUse: ""
 
 - /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/reference/02-diary.md — Diary now records the bundle refresh step
 - /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/index.md — Index now reflects that the scaffold exists
+
+## 2026-04-17 - Browser bridge and worker executors added
+
+- Replaced the temporary loopback browser bridge with an attachable in-memory browser session bridge.
+- Added worker-backed OPFS and WASM executors plus the generic worker helper used by the browser broker.
+- Added bridge tests and updated the ticket docs to reflect the new implementation boundary.
+- `go test ./...` passes after the bridge swap.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/browserbridge.go — Attachable browser session bridge and request/result correlation
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/browserbridge_test.go — Bridge tests for connected and disconnected browser sessions
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/worker-client.ts — Generic worker request helper used by browser executors
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/opfs-executors.ts — OPFS worker-backed executors
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/wasm-executors.ts — WASM worker-backed executors
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/opfs.worker.ts — OPFS worker implementation
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/parser.worker.ts — Parser worker implementation
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/workers/wasm.worker.ts — WASM worker implementation
+
+## 2026-04-17 - Browser bridge docs refreshed
+
+- Refreshed the docs and reMarkable bundle after the browser bridge/executor changes so the published artifact matches the current ticket state.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/reference/02-diary.md — Diary updated with the browser bridge and bundle-refresh notes
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/index.md — Index updated to reflect the current scaffold

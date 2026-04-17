@@ -71,7 +71,7 @@ WhenToUse: ""
 
 ## Overview
 
-This ticket documents the design for a simple proof of concept where the Go backend owns the conversation and the browser owns capability-bound tools such as OPFS and WASM workers. The repository now includes an initial implementation scaffold: the Go backend service, mock router, backend tests, and frontend contract files exist, but the real browser execution path is still a stub.
+This ticket documents the design for a simple proof of concept where the Go backend owns the conversation and the browser owns capability-bound tools such as OPFS and WASM workers. The repository now includes an initial implementation scaffold: the Go backend service, an in-memory browser session bridge, and worker-backed browser executors exist, but the real websocket/browser transport is still not wired.
 
 The main goal is still to validate the routed RPC model with mocked LLM calls and minimal policy. That keeps the first build small while still proving the most important boundary: model → backend router → browser tool broker → backend → model.
 

@@ -49,5 +49,5 @@ WhenToUse: ""
 
 ## Notes
 
-- The implementation code does not exist yet; this ticket is a design-first proof-of-concept.
+- The implementation is still a proof-of-concept; the real websocket/browser transport and a production LLM provider are intentionally out of scope for now.
 - The simple version intentionally excludes policy-engine complexity and real LLM integration.
