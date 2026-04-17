@@ -414,6 +414,8 @@ The most important thing preserved here is the trust split: the Go backend still
 
 **Commit (code):** dc724a1 — "Add browser bridge and worker-backed executors"
 
+**Commit (docs):** ca149cf — "Update ticket docs for browser bridge"
+
 ### What I did
 - Added `backend/internal/chat/browserbridge.go` with:
   - attachable browser sessions
@@ -432,6 +434,7 @@ The most important thing preserved here is the trust split: the Go backend still
   - `frontend/src/workers/wasm.worker.ts`
 - Updated `frontend/src/tool-broker/registry.ts` to wire the new executors into the default tool registry.
 - Updated the ticket docs to match the new file layout and task state.
+- Committed the doc updates so the ticket history reflects the bridge/executor work.
 - Refreshed the reMarkable bundle with the updated docs so the published artifact stays in sync with the new bridge/executor scaffold.
 - Ran `gofmt -w backend/cmd/chatd/main.go backend/internal/chat/*.go && go test ./...`.
 - Checked for a local TypeScript compiler with `which tsc || true`; the environment had no `tsc` binary available, so the frontend changes were validated by source review rather than by a local TS compile.
