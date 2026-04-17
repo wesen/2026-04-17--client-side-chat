@@ -8,7 +8,7 @@ export function createOpfsListDirExecutor() {
       args,
       timeout_ms: 10_000,
     };
-    const response = await runWorkerTask(new URL("../workers/opfs.worker.ts", import.meta.url), request, 10_000);
+    const response = await runWorkerTask(new URL("../workers/opfs.worker.js", import.meta.url), request, 10_000);
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS list_dir failed");
     }
@@ -24,7 +24,7 @@ export function createOpfsReadTextExecutor() {
       args,
       timeout_ms: 10_000,
     };
-    const response = await runWorkerTask(new URL("../workers/opfs.worker.ts", import.meta.url), request, 10_000);
+    const response = await runWorkerTask(new URL("../workers/opfs.worker.js", import.meta.url), request, 10_000);
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS read_text failed");
     }
@@ -40,7 +40,7 @@ export function createOpfsWriteTextExecutor() {
       args,
       timeout_ms: 10_000,
     };
-    const response = await runWorkerTask(new URL("../workers/opfs.worker.ts", import.meta.url), request, 10_000);
+    const response = await runWorkerTask(new URL("../workers/opfs.worker.js", import.meta.url), request, 10_000);
     if (!response.ok) {
       throw new Error(response.error?.message ?? "OPFS write_text failed");
     }

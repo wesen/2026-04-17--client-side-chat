@@ -20,6 +20,7 @@ func (h *HTTPServer) Handler() http.Handler {
 	mux.HandleFunc("/healthz", h.handleHealth)
 	mux.HandleFunc("/api/sessions", h.handleSessions)
 	mux.HandleFunc("/api/sessions/", h.handleSession)
+	mux.Handle("/", http.FileServer(http.Dir("frontend/dist")))
 	return mux
 }
 

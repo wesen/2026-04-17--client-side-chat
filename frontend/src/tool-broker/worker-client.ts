@@ -14,7 +14,7 @@ export interface WorkerTaskResponse {
 }
 
 export async function runWorkerTask(
-  workerUrl: URL,
+  workerUrl: string | URL,
   request: WorkerTaskRequest,
   timeoutMs = 30_000,
 ): Promise<WorkerTaskResponse> {

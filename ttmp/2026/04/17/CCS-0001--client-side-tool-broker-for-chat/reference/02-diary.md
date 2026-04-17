@@ -18,8 +18,12 @@ RelatedFiles:
       Note: Frontend scaffold referenced by the implementation diary
     - Path: frontend/src/tool-broker/contracts.ts
       Note: Frontend contract layer referenced by the implementation diary
+    - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/changelog.md
+      Note: Record of the playbook creation
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/design-doc/01-client-side-tool-broker-design-and-implementation-guide.md
       Note: Primary design artifact documented in the diary
+    - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/playbook/01-run-the-browser-demo.md
+      Note: Canonical run instructions that match the tmux/browser smoke test step
     - Path: ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/reference/01-client-side-tool-broker-api-reference.md
       Note: Companion quick-reference for the same routing contract
 ExternalSources: []
@@ -28,6 +32,7 @@ LastUpdated: 2026-04-17T08:59:26.597070339-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -735,3 +740,89 @@ I also removed the last React dependency from the demo path so the UI can be val
 - Demo shell: `frontend/src/demo/browser-chat-demo.ts`
 - HTML entrypoint: `frontend/index.html`
 - TypeScript validation command: `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit`
+
+## Step 8: Create the runnable playbook, start the demo in tmux, and verify the browser flow
+
+This step turned the implementation into something a reviewer can actually run. I wrote a playbook that documents the build-and-launch sequence, then started the backend in tmux on port 8090 so it could serve the demo bundle and API from the same origin. I also opened the browser demo in Playwright and verified that a demo prompt flows through the websocket transport and returns a tool result.
+
+The important part here is operational clarity: the code was already there, but this step makes it obvious how to launch it, which port to use, and what success looks like. The playbook captures that procedure for repeat use, and the tmux session keeps the demo alive so it can be reopened during review.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Write a repeatable runbook for the demo, launch it in tmux, and verify the browser workflow end-to-end.
+
+**Inferred user intent:** Make the prototype easy to start and inspect, then prove that it works in an actual browser session.
+
+**Commit (code):** 0058ea8 — "Document demo UI wiring"
+
+### What I did
+- Added `playbook/01-run-the-browser-demo.md` with:
+  - frontend bundle build commands
+  - TypeScript validation
+  - tmux launch instructions
+  - the browser URL to open
+  - exit criteria for a successful smoke test
+- Updated `backend/internal/chat/http.go` so the backend serves `frontend/dist` from the same origin as the API and websocket endpoints.
+- Changed the playbook to launch the backend with `CHATD_ADDR=:8090` to avoid a local port conflict.
+- Built the browser bundle into `frontend/dist/main.js` and bundled the worker entrypoints into `frontend/dist/workers/*.js` with esbuild.
+- Started a tmux session named `ccs-0001-demo` running `CHATD_ADDR=:8090 go run ./backend/cmd/chatd`.
+- Verified the demo in Playwright by loading `http://localhost:8090/` and sending the sample prompt.
+
+### Why
+- A proof of concept is much easier to review when the run path is documented as a playbook instead of being buried in chat history.
+- Serving the static demo from the same origin as the backend avoids cross-origin friction for the websocket and session APIs.
+- Starting the demo in tmux keeps it available while other checks or browser sessions run.
+
+### What worked
+- The playbook now documents the full build/start/verify flow.
+- `http://localhost:8090/` serves the demo shell from the backend.
+- The demo successfully opens a session, connects the websocket client, and sends the sample prompt through the backend.
+- The tool round trip completed successfully in the browser, returning `Tool wasm.run_task completed successfully: No TODO matches found.`
+- `go test ./...` and the TypeScript compile both passed after the worker URL and OPFS typing fixes.
+
+### What didn't work
+- The first attempt to start the backend on port 8080 failed because another local service already occupied the port:
+
+  ```text
+  2026/04/17 10:47:36 chatd listening on :8080
+  2026/04/17 10:47:36 listen tcp :8080: bind: address already in use
+  exit status 1
+  ```
+
+- I fixed that by moving the demo to port 8090 and documenting that choice in the playbook.
+- Before the worker bundle fix, the browser demo failed with `Worker task grep failed to initialize`; rebuilding the worker bundles to `frontend/dist/workers/*.js` resolved it.
+
+### What I learned
+- A demo that depends on worker scripts needs the workers bundled as first-class build artifacts, not just the main entrypoint.
+- The browser demo is much easier to verify once the backend serves both the API and the static assets from one origin.
+- A tmux session is a good fit for keeping a small local demo alive during review.
+
+### What was tricky to build
+- The main sharp edge was getting the worker scripts to resolve to actual bundled `.js` files instead of the original `.ts` sources.
+- Another tricky point was the port conflict: the code was fine, but the environment already had something on 8080, so the demo needed a documented alternate port.
+- The playbook needed to be explicit enough that a reviewer can follow it without already knowing how the backend and frontend are wired together.
+
+### What warrants a second pair of eyes
+- Confirm that serving static assets directly from `backend/internal/chat/http.go` remains the right long-term choice.
+- Review the worker bundle build step to make sure it stays synchronized with the worker entrypoints as they evolve.
+- Check that using port 8090 is acceptable for the intended demo workflow and does not conflict with other local services.
+
+### What should be done in the future
+- Keep the playbook updated if the build or launch commands change.
+- Consider adding a small helper script if the bundle/build commands get any longer.
+- If a future UI framework is introduced, revisit whether the demo should stay same-origin or move to a proxy-based dev setup.
+
+### Code review instructions
+- Start in `playbook/01-run-the-browser-demo.md` and `backend/internal/chat/http.go`.
+- Then review `frontend/src/tool-broker/opfs-executors.ts`, `frontend/src/tool-broker/wasm-executors.ts`, and `frontend/src/tool-broker/worker-client.ts` to confirm the worker bundle paths.
+- Check `frontend/src/demo/browser-chat-demo.ts` and `frontend/src/session/websocket-session-client.ts` to see how the browser demo connects to the backend.
+- Validate with the TypeScript compile, `go test ./...`, and a browser smoke test against `http://localhost:8090/`.
+
+### Technical details
+- Playbook path: `playbook/01-run-the-browser-demo.md`
+- Demo port: `8090`
+- tmux session: `ccs-0001-demo`
+- Browser smoke-test URL: `http://localhost:8090/`
+- Worker bundle outputs: `frontend/dist/workers/opfs.worker.js`, `frontend/dist/workers/wasm.worker.js`, `frontend/dist/workers/parser.worker.js`

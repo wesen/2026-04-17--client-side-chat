@@ -40,6 +40,9 @@ WhenToUse: ""
 - [x] Validate the frontend TypeScript demo with `tsc --noEmit`
 - [x] Refresh the reMarkable bundle after the demo UI wiring
 - [x] Verify the refreshed bundle listing on reMarkable
+- [x] Create the browser demo run playbook
+- [x] Launch the demo in tmux on port 8090
+- [x] Verify the browser smoke test end-to-end
 
 ## Completed
 
@@ -58,4 +61,6 @@ WhenToUse: ""
 - The implementation is still a proof-of-concept; the websocket/browser transport is now present, but a production LLM provider is intentionally out of scope for now.
 - The browser demo is DOM-based to avoid a React/toolchain dependency in this repo.
 - Frontend TypeScript validation used `npm exec --yes --package typescript@5.8.3 -- tsc --project frontend/tsconfig.json --noEmit`.
+- The run playbook uses `CHATD_ADDR=:8090 go run ./backend/cmd/chatd` and the browser smoke-test URL is `http://localhost:8090/`.
+- The demo backend is currently running in tmux as `ccs-0001-demo`.
 - The simple version intentionally excludes policy-engine complexity and real LLM integration.

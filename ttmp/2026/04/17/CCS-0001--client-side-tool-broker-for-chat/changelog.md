@@ -19,6 +19,22 @@ WhenToUse: ""
 
 # Changelog
 
+## 2026-04-17 - Browser demo playbook and tmux smoke test completed
+
+- Added a runnable playbook for building, launching, and smoke-testing the browser demo.
+- Started the demo backend in tmux on port 8090 so the backend and static assets share one origin.
+- Verified the browser smoke test end-to-end in Playwright.
+- Rebuilt the frontend worker bundles so the demo can load actual worker scripts instead of TypeScript sources.
+
+### Related Files
+
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/ttmp/2026/04/17/CCS-0001--client-side-tool-broker-for-chat/playbook/01-run-the-browser-demo.md — Canonical run instructions for the browser demo
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/backend/internal/chat/http.go — Static asset serving and API routing from the same origin
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/opfs-executors.ts — Worker bundle path updates for the demo runtime
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/wasm-executors.ts — Worker bundle path updates for the demo runtime
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/tool-broker/worker-client.ts — Worker helper updated to accept worker URLs or strings
+- /home/manuel/code/wesen/2026-04-17--client-side-chat/frontend/src/demo/browser-chat-demo.ts — Demo shell that the playbook launches in the browser
+
 ## 2026-04-17 - Demo UI wired to the websocket session client
 
 - Added a DOM-based browser demo shell that creates a chat session, connects the websocket session client, and posts user prompts back to the backend.
