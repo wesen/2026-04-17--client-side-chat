@@ -58,8 +58,9 @@ async function getRootDirectory(): Promise<FileSystemDirectoryHandle> {
 async function listDirectory(root: FileSystemDirectoryHandle, path: string, limit: number): Promise<unknown> {
   const dir = await resolveDirectory(root, path);
   const entries: string[] = [];
-  for await (const [name] of dir.entries()) {
-    entries.push(name);
+  const iterable = dir as unknown as AsyncIterable<[string, FileSystemHandle]>;
+  for await (const [name] of iterable) {
+    entries.push(String(name));
     if (entries.length >= limit) {
       break;
     }

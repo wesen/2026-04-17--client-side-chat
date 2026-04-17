@@ -55,3 +55,16 @@ export interface ConversationMessage {
   tool_result?: ToolResultEnvelope;
   created_at: string;
 }
+
+export interface SessionSnapshot {
+  id: string;
+  messages: ConversationMessage[];
+  tools: ToolManifest[];
+  capabilities: SessionCapabilities;
+}
+
+export interface TurnResponse {
+  session: SessionSnapshot;
+  assistant_text?: string;
+  last_tool_result?: ToolResultEnvelope;
+}

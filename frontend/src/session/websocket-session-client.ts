@@ -1,5 +1,5 @@
 import type { FrontendToolBroker } from "../tool-broker/broker";
-import type { SessionCapabilities, SessionCapabilitiesEnvelope } from "../tool-broker/contracts";
+import type { SessionCapabilities, SessionCapabilitiesEnvelope, ToolResultEnvelope } from "../tool-broker/contracts";
 
 export interface BrowserSessionClientOptions {
   sessionUrl: string;
@@ -52,7 +52,7 @@ export class WebSocketSessionClient {
     this.socket = null;
   }
 
-  async send(message: SessionCapabilitiesEnvelope | Record<string, unknown>): Promise<void> {
+  async send(message: SessionCapabilitiesEnvelope | ToolResultEnvelope): Promise<void> {
     this.ensureSocket();
     this.socket!.send(JSON.stringify(message));
   }
